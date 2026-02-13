@@ -53,7 +53,6 @@ namespace ichortower
         public float DirectionalFadingMinStrength = 0.30f;
     }
 
-
     public enum LumaType {
         BT709 = 0,
         BT601 = 1,
