@@ -27,7 +27,12 @@ namespace ichortower
         private static bool usingColorizeUI = false;
         private static bool usingDepthOfField = false;
 
+
+        // Depth of field directional fading (Tilt-Shift style)
+        private static float dofDirectionalTarget = 0f; // -1 up, +1 down, 0 none
+        private static float dofDirectionalCurrent = 0f;
         public static ModConfig Config;
+        private static ModConfig AppliedConfig;
 
         public static Nightshade instance;
 
@@ -75,6 +80,7 @@ namespace ichortower
 
         public void ApplyConfig(ModConfig conf)
         {
+            AppliedConfig = conf;
             int index = conf.ColorizerActiveProfile;
             if (conf.ColorizeBySeason) {
                 index = Game1.currentLocation?.GetSeasonIndex() ?? Game1.seasonIndex;
@@ -275,6 +281,44 @@ namespace ichortower
             float ypos = Game1.player.getLocalPosition(Game1.viewport).Y;
             ypos += Game1.player.GetBoundingBox().Height / 2;
             ypos /= Game1.viewport.Height;
+
+            // Directional fading (Tilt-Shift style): bias the focus band toward facing direction.
+            // Note: Nightshade's DoF shader supports asymmetric focus via Center around 0.5.
+            {
+                var dof = AppliedConfig?.DepthOfFieldSettings;
+                bool enabled = usingDepthOfField && (dof?.DirectionalFadingEnabled ?? false);
+                bool inEvent = Game1.eventUp || Game1.CurrentEvent != null;
+                if (enabled && inEvent && !(dof?.DirectionalFadingDuringEvents ?? false))
+                    enabled = false;
+
+                float target = 0f;
+                if (enabled) {
+                    // Stardew facing directions: 0 up, 1 right, 2 down, 3 left
+                    int fd = Game1.player.FacingDirection;
+                    if (fd == 0) target = -1f;
+                    else if (fd == 2) target = 1f;
+                }
+
+                dofDirectionalTarget = target;
+
+                float fadeTime = Math.Clamp(dof?.DirectionalFadingTime ?? 0.5f, 0f, 1f);
+                if (!enabled || fadeTime <= 0f) {
+                    dofDirectionalCurrent = dofDirectionalTarget;
+                } else {
+                    float dt = (float)Game1.currentGameTime.ElapsedGameTime.TotalSeconds;
+                    float t = Math.Clamp(dt / fadeTime, 0f, 1f);
+                    dofDirectionalCurrent = MathHelper.Lerp(dofDirectionalCurrent, dofDirectionalTarget, t);
+                }
+
+                if (enabled && dofDirectionalCurrent != 0f) {
+                    float minStrength = Math.Clamp(dof?.DirectionalFadingMinStrength ?? 0.30f, 0f, 1f);
+                    float shiftPct = 1f - minStrength; // 0=no effect, 1=max effect
+                    float field = Math.Clamp(dof?.Field ?? 0.6f, 0f, 1f);
+                    float maxShift = field / 2f;
+                    ypos = Math.Clamp(ypos + (dofDirectionalCurrent * maxShift * shiftPct), 0f, 1f);
+                }
+            }
+
             if (ypos < 0f || ypos > 1.0f) {
                 ypos = 0.5f;
             }

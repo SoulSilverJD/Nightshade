@@ -45,7 +45,14 @@ namespace ichortower
     {
         public float Field = 0.6f;
         public float Intensity = 6.0f;
+
+        // Tilt-Shift style "Directional fading"
+        public bool DirectionalFadingEnabled = false;
+        public bool DirectionalFadingDuringEvents = false;
+        public float DirectionalFadingTime = 0.5f;
+        public float DirectionalFadingMinStrength = 0.30f;
     }
+
 
     public enum LumaType {
         BT709 = 0,
