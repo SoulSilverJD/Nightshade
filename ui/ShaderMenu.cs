@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -189,12 +190,49 @@ namespace ichortower.ui
             var sld_intensity = new Slider(this, new Rectangle(126, y, 201, 20),
                     name: "Intensity", range: new int[]{0, 100});
             sld_intensity.ValueDelegate = sld_intensity.FloatRenderer(denom:10f);
-            y += lbl_intensity.Bounds.Height + 16;
+            y += lbl_intensity.Bounds.Height + 8;
+
+            var chk_directionalFading = new Checkbox(this, 20, y, "DirectionalFadingEnabled");
+            var lbl_directionalFading = new Label(this,
+                    new Rectangle(56, y, 0, 27),
+                    text: TR.Get("menu.DirectionalFading.Text"),
+                    hoverText: TR.Get("menu.DirectionalFading.Hover"),
+                    activate: chk_directionalFading);
+            y += chk_directionalFading.Bounds.Height + 8;
+
+            var chk_directionalFadingEvents = new Checkbox(this, 20, y, "DirectionalFadingDuringEvents");
+            var lbl_directionalFadingEvents = new Label(this,
+                    new Rectangle(56, y, 0, 27),
+                    text: TR.Get("menu.DirectionalFadingDuringEvents.Text"),
+                    hoverText: TR.Get("menu.DirectionalFadingDuringEvents.Hover"),
+                    activate: chk_directionalFadingEvents);
+            y += chk_directionalFadingEvents.Bounds.Height + 16;
+
+            var lbl_directionalFadingTime = new Label(this,
+                    new Rectangle(20, y, 96, 20),
+                    text: TR.Get("menu.DirectionalFadingTime.Text"),
+                    hoverText: TR.Get("menu.DirectionalFadingTime.Hover"));
+            var sld_directionalFadingTime = new Slider(this, new Rectangle(126, y, 201, 20),
+                    name: "DirectionalFadingTime", range: new int[]{0, 100});
+            sld_directionalFadingTime.ValueDelegate = sld_directionalFadingTime.FloatRenderer(denom:100f);
+            y += lbl_directionalFadingTime.Bounds.Height + 8;
+
+            var lbl_directionalFadingMin = new Label(this,
+                    new Rectangle(20, y, 96, 20),
+                    text: TR.Get("menu.DirectionalFadingMinStrength.Text"),
+                    hoverText: TR.Get("menu.DirectionalFadingMinStrength.Hover"));
+            var sld_directionalFadingMin = new Slider(this, new Rectangle(126, y, 201, 20),
+                    name: "DirectionalFadingMinStrength", range: new int[]{0, 100});
+            sld_directionalFadingMin.ValueDelegate = sld_directionalFadingMin.FloatRenderer(denom:100f);
+            y += lbl_directionalFadingMin.Bounds.Height + 16;
 
             var btn_save = new TextButton(this, 0, 0,
                     text: TR.Get("menu.Save.Text"), onClick: SaveSettings);
             btn_save.Bounds.X = defaultWidth/2 - btn_save.Bounds.Width/2;
-            btn_save.Bounds.Y = defaultHeight - btn_save.Bounds.Height - 8;
+            btn_save.Bounds.Y = y;
+
+            // expand the menu height so the Save button never overlaps controls
+            this.height = btn_save.Bounds.Y + btn_save.Bounds.Height + 8;
 
             this.children.AddRange(new List<Widget>() {
                 lbl_colorizer, lbl_colorizeWorld, chk_colorizeWorld,
@@ -215,6 +253,10 @@ namespace ichortower.ui
                 lbl_enableDepthOfField, chk_enableDepthOfField,
                 lbl_field, sld_field,
                 lbl_intensity, sld_intensity,
+                lbl_directionalFading, chk_directionalFading,
+                lbl_directionalFadingEvents, chk_directionalFadingEvents,
+                lbl_directionalFadingTime, sld_directionalFadingTime,
+                lbl_directionalFadingMin, sld_directionalFadingMin,
                 btn_save,
             });
         }
@@ -305,7 +347,7 @@ namespace ichortower.ui
         public void LoadDepthOfFieldPreset(DepthOfFieldPreset set)
         {
             foreach (var child in this.children) {
-                if ((child is Slider ch)) {
+                if (child is Slider ch) {
                     switch (ch.Name) {
                     case "Field":
                         ch.Value = (int)(set.Field * 100);
@@ -313,10 +355,27 @@ namespace ichortower.ui
                     case "Intensity":
                         ch.Value = (int)(set.Intensity * 10);
                         break;
+                    case "DirectionalFadingTime":
+                        ch.Value = (int)(Math.Clamp(set.DirectionalFadingTime, 0f, 1f) * 100);
+                        break;
+                    case "DirectionalFadingMinStrength":
+                        ch.Value = (int)(Math.Clamp(set.DirectionalFadingMinStrength, 0f, 1f) * 100);
+                        break;
+                    }
+                }
+                else if (child is Checkbox cb) {
+                    switch (cb.Name) {
+                    case "DirectionalFadingEnabled":
+                        cb.Value = set.DirectionalFadingEnabled;
+                        break;
+                    case "DirectionalFadingDuringEvents":
+                        cb.Value = set.DirectionalFadingDuringEvents;
+                        break;
                     }
                 }
             }
         }
+
 
         public void SaveSettings()
         {
@@ -338,6 +397,18 @@ namespace ichortower.ui
                     break;
                 case "Intensity":
                     built.DepthOfFieldSettings.Intensity = (float)(ch as Slider).Value / 10f;
+                    break;
+                case "DirectionalFadingEnabled":
+                    built.DepthOfFieldSettings.DirectionalFadingEnabled = (ch as Checkbox).Value;
+                    break;
+                case "DirectionalFadingDuringEvents":
+                    built.DepthOfFieldSettings.DirectionalFadingDuringEvents = (ch as Checkbox).Value;
+                    break;
+                case "DirectionalFadingTime":
+                    built.DepthOfFieldSettings.DirectionalFadingTime = (float)(ch as Slider).Value / 100f;
+                    break;
+                case "DirectionalFadingMinStrength":
+                    built.DepthOfFieldSettings.DirectionalFadingMinStrength = (float)(ch as Slider).Value / 100f;
                     break;
                 }
             }
@@ -506,6 +577,18 @@ namespace ichortower.ui
                     break;
                 case "Intensity":
                     built.DepthOfFieldSettings.Intensity = (float)(ch as Slider).Value / 10f;
+                    break;
+                case "DirectionalFadingEnabled":
+                    built.DepthOfFieldSettings.DirectionalFadingEnabled = (ch as Checkbox).Value;
+                    break;
+                case "DirectionalFadingDuringEvents":
+                    built.DepthOfFieldSettings.DirectionalFadingDuringEvents = (ch as Checkbox).Value;
+                    break;
+                case "DirectionalFadingTime":
+                    built.DepthOfFieldSettings.DirectionalFadingTime = (float)(ch as Slider).Value / 100f;
+                    break;
+                case "DirectionalFadingMinStrength":
+                    built.DepthOfFieldSettings.DirectionalFadingMinStrength = (float)(ch as Slider).Value / 100f;
                     break;
                 }
             }
