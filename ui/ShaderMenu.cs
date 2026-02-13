@@ -376,7 +376,6 @@ namespace ichortower.ui
             }
         }
 
-
         public void SaveSettings()
         {
             ModConfig built = new();
